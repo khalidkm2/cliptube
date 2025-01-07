@@ -38,12 +38,6 @@ const videoSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    likes: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
   },
   {
     timestamps: true,
