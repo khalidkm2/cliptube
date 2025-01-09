@@ -1,7 +1,5 @@
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
-
-const { Schema, default: mongoose } = require("mongoose");
-
+import mongoose,{Schema} from "mongoose"
 //add comment feature
 
 const videoSchema = mongoose.Schema(
