@@ -4,12 +4,8 @@ import { User } from "../models/user.model.js";
 import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
-const demo = (req, res) => {
-  const { name } = req.body;
-  console.log("name", name);
-  res.json({ message: "check" });
-};
 
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, fullname } = req.body;
@@ -458,6 +454,20 @@ export {
   getWatchHistory
 
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //login
 /*
