@@ -1,11 +1,12 @@
 import {asyncHandler} from "../utils/asyncHandler.js"
 import  jwt from "jsonwebtoken"
 import {User} from "../models/user.model.js"
+import { ApiError } from "../utils/ApiError.js"
 
 
 const verifyJwt = asyncHandler(async(req,res,next) => {
     try {
-        const token = req.cookies?.accessToken || req.headers("authorization")?.replace("Bearer ","")
+        const token = req.cookies?.accessToken || req.header("authorization")?.replace("Bearer ","")
         if(!token){
             throw new ApiError(400,"Token not found")
         }
