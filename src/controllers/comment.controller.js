@@ -25,11 +25,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const getVideoComments = asyncHandler(async (req, res) => {
   //TODO: get all comments for a video
   const { videoId } = req.params;
-  console.log(req.query.limit);
-  console.log(req.query.page);
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 5));
-//   console.log(page,limit);
   if (!videoId) {
     throw new ApiError(400, "Video id is required");
   }

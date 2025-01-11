@@ -8,8 +8,10 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 5));
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
