@@ -71,6 +71,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
               _id: 1, // Include if you need the subscriber's ID
               username: 1,
               avatar: 1,
+              fullname:1,
             },
           },
         ],

@@ -136,40 +136,30 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 const getLikedVideos = asyncHandler(async (req, res) => {
   //TODO: get all liked videos
 try {
-      const videos = await Like.aggregate([
-        {
-          $match: {
-            likedBy: new mongoose.Types.ObjectId(req.user._id),
-          },
-        },
-        {
-          $lookup: {
-            from: "videos",
-            localField: "video",
-            foreignField: "_id",
-            as: "likedVideos",
-          },
-        },
-        {
-          $group: {
-            _id: "$likedVideos", // Group by channel
-            likedVideos: { $push: "$likedVideos" }, // Push all subscribers into an array
-          },
-        },
-        {
-            $project: {
-            //   _id: 0, // Exclude the `_id` field from the final result
-              channelId: "$_id", // Include channel ID
-              likedVideos: {
-                $reduce: {
-                  input: "$likedVideos", // Flatten the nested subscribers array
-                  initialValue: [],
-                  in: { $concatArrays: ["$$value", "$$this"] },
-                },
-              },
-            },
-          },
-      ]);
+  const videos = await Like.aggregate([
+    {
+      $match: {
+        likedBy: new mongoose.Types.ObjectId(req.user._id), // Match likes by the user
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",          
+        localField: "video",     
+        foreignField: "_id",    
+        as: "likedVideos",      
+      },
+    },
+    {
+      $unwind: "$likedVideos",   // Flatten the `likedVideos` array
+    },
+    {
+      $replaceRoot: {
+        newRoot: "$likedVideos", // Replace the document root with `likedVideos`
+      },
+    },
+  ]);
+  
       return res
       .status(200)
       .json(
