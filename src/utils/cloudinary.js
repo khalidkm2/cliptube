@@ -12,16 +12,22 @@ cloudinary.config({
 
 const deleteOnCloudinary = async(cloudinaryUrl) => {
   try {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
-    console.log("delete on cloudinary");
     const parts = cloudinaryUrl.split("/");
-    const publicId = parts[parts.length - 1].split(".")[0];
-    console.log(publicId);
-    const result = await cloudinary.uploader.destroy(publicId);
+    const fileName = parts[parts.length - 1];
+    const [publicId, extension] = fileName.split(".");
+
+    console.log("Public ID:", publicId);
+    console.log("Extension:", extension);
+
+    let resourceType = "image"; // Default to image
+    if (["mp4", "mov", "avi", "mkv"].includes(extension.toLowerCase())) {
+      resourceType = "video";
+    }
+
+    // Delete the resource from Cloudinary
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+    });
     console.log("Image deleted successfully:", result);
     return result
 } catch(error){

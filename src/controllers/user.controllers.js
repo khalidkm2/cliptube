@@ -297,6 +297,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "avatar file is required cloud");
   }
 
+  //delete
+  const result = await deleteOnCloudinary(req.user.coverImage);
+  if (!result) {
+    throw new ApiError(500, "failed to delete the old image");
+  }
+
   const user = await User.findByIdAndUpdate(
     req.user_id,
     {

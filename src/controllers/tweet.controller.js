@@ -27,25 +27,30 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
     // TODO: get user tweets
+    console.log("inside getusertwwets");
     const userTweets = await Tweet.find({
         owner:req.user._id
     })
+    console.log("after get");
 
     return res
-    .status(200,userTweets,"fetched user tweets successfully")
+    .status(200)
+    .json(
+        new ApiResponse(200,userTweets,"fetched user tweets successfully")
+    )
 })
 
 const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
     const {content} = req.body
-    if(!content){
-        throw new ApiError(400,"content field is missing")
+    const {tweetId} = req.params
+    if(!content || !tweetId){
+        throw new ApiError(400," fields are missing")
     }
-    const updatedTweet = await Tweet.findByIdAndUpdate(
-        req.user._id,
-        {
-            $set:{content}
-        }
+    const updatedTweet = await Tweet.findOneAndUpdate(
+        {_id:tweetId,owner:req.user._id},
+        {content},
+        {new:true}
     )
     if(!updatedTweet){
         return res
@@ -64,7 +69,11 @@ const updateTweet = asyncHandler(async (req, res) => {
 
 const deleteTweet = asyncHandler(async (req, res) => {
     //TODO: delete tweet
-    const deletedTweet = await Tweet.findByIdAndDelete(req.user._id)
+    const {tweetId} = req.params
+    if(!tweetId){
+        throw new ApiError(400," fields are missing")
+    }
+    const deletedTweet = await Tweet.findOneAndDelete({_id:tweetId,owner:req.user._id})
     if(!deletedTweet){
         throw new ApiError(400,"tweet not found")
     }
