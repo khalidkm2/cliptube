@@ -6,11 +6,69 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 
+// const asyncHandler = require("express-async-handler");
+// const Video = require("../models/videoModel"); // Adjust path as needed
+
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
+  const { query, sortBy, sortType } = req.query;
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 5));
+  const searchFilter = {};
+  if (query) {
+    searchFilter.title = { $regex: query, $options: "i" }; // Case-insensitive search on title
+  }
+
+  const sortOptions = {};
+  if (sortBy) {
+    sortOptions[sortBy] = sortType === "desc" ? -1 : 1;
+  }
+
+  // Create aggregation pipeline
+  const aggregationPipeline = [
+    { $match: searchFilter },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              fullName: 1,
+              username: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    }, // Apply the search filter
+    { $sort: sortOptions }, // Apply the sort order
+    { $skip: (page - 1) * limit }, // Pagination - skip results based on page number
+    { $limit: limit }, // Limit the number of results per page
+  ];
+
+  // Run the aggregation pipeline with pagination
+  const options = {
+    page,
+    limit,
+    customLabels: {
+      totalDocs: "totalVideos",
+      docs: "videos",
+    },
+  };
+  try {
+    const result = await Video.aggregatePaginate(aggregationPipeline, options);
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, result, "successfully fetched all videos"));
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Failed to fetch videos" });
+  }
+
+  // res.status(200).json(result);
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -63,18 +121,61 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: get video by id
-  if (!videoId) {
+  
+  if (!videoId || !isValidObjectId(videoId)) {
     throw new ApiError(400, "videoId is missing");
   }
-  const video = await Video.findById(videoId);
-  if (!video) {
-    throw new ApiError(400, "video is not found");
+
+  const video = await Video.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(videoId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "video",
+        as: "comments",
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: { $size: "$likes" }, // Count the number of likes
+        isLiked: {
+          $cond: {
+            if: { $in: [new mongoose.Types.ObjectId(req.user._id), "$likes.likedBy"] }, // Match user ID
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        likes: 0, // Remove likes array if not needed in the final response
+      },
+    },
+  ]);
+
+  if (!video || video.length === 0) {
+    throw new ApiError(400, "Video is not found");
   }
+
   return res
     .status(200)
-    .json(new ApiResponse(200, video, "Video fetched successfully"));
+    .json(new ApiResponse(200, video[0], "Video fetched successfully"));
 });
+
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;

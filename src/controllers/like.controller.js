@@ -171,4 +171,17 @@ try {
   
 });
 
-export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };
+const getLikeCount = asyncHandler(async(req,res) => {
+  const {videoId} = req.params
+  if(!videoId || !isValidObjectId(videoId)){
+    throw new ApiError(400,"invalid video id")
+  }
+  const like = await Like.find({where:{video:videoId}})
+  if(!like){
+    return res.status(400).json(new ApiResponse(400,{},"no like found"))
+  }
+  console.log(like);
+  return res.status(200).json(new ApiResponse(200,like,"like fetched successfully"))
+})
+
+export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos,getLikeCount };

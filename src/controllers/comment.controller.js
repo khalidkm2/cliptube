@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose,{isValidObjectId} from "mongoose";
 import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -22,38 +22,67 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 // if(!comments)
 
+// const mongoose = require("mongoose");
+
 const getVideoComments = asyncHandler(async (req, res) => {
-  //TODO: get all comments for a video
   const { videoId } = req.params;
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 5));
+
   if (!videoId) {
-    throw new ApiError(400, "Video id is required");
+    throw new ApiError(400, "Video ID is required");
   }
+
   try {
-    const myAggregate = await Comment.aggregate([
-      { $match: { video: videoId } }, // Filter by video ID
-      { $sort: { createdAt: -1 } }, // Optional: Sort by creation date
+    // Convert videoId to ObjectId if needed
+    const videoObjectId =  mongoose.Types.ObjectId.isValid(videoId)
+      ? new mongoose.Types.ObjectId(videoId)
+      : videoId;
+
+    // Aggregation pipeline
+    const myAggregate = Comment.aggregate([
+      { $match: { video: videoObjectId } }, // Filter by video ID
+      {
+        $lookup: {
+          from: "users", // Foreign collection
+          localField: "owner", // Field in the Comment collection
+          foreignField: "_id", // Field in the users collection
+          as: "owner", // Output array field
+          pipeline: [
+            {
+              $project: {
+                username: 1, // Include only username
+                avatar: 1, // Include only avatar
+                _id: 0, // Exclude the _id field
+              },
+            },
+          ],
+        },
+      },
+      { $unwind: "$owner" }, // Flatten the owner array
+      { $sort: { createdAt: -1 } }, // Sort by creation date descending
     ]);
 
     // Paginate the results
-    // console.log("myaggreage   :",myAggregate);
     const paginatedResults = await Comment.aggregatePaginate(myAggregate, {
       page,
       limit,
     });
-    // console.log("paginatedresults  : ", paginatedResults);
+
+    // Return the paginated results
     if (!paginatedResults) {
-      throw new ApiError(400, "comments not found");
+      throw new ApiError(404, "Comments not found for the specified video");
     }
+
     return res
       .status(200)
-      .json(new ApiResponse(200, paginatedResults.docs, "comments fetched successfully"));
+      .json(new ApiResponse(200, paginatedResults?.docs, "Comments fetched successfully"));
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching comments:", error);
     throw new ApiError(500, "An error occurred while fetching comments");
   }
 });
+
 
 const addComment = asyncHandler(async (req, res) => {
   // TODO: add a comment to a video
